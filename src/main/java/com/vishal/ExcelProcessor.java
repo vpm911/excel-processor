@@ -2,14 +2,12 @@ package com.vishal;
 
 import org.dhatim.fastexcel.Workbook;
 import org.dhatim.fastexcel.Worksheet;
-import org.dhatim.fastexcel.reader.Cell;
-import org.dhatim.fastexcel.reader.ReadableWorkbook;
-import org.dhatim.fastexcel.reader.Row;
-import org.dhatim.fastexcel.reader.Sheet;
+import org.dhatim.fastexcel.reader.*;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 public class ExcelProcessor {
@@ -22,40 +20,74 @@ public class ExcelProcessor {
         columnsToCheck.add(3);
         columnsToCheck.add(4);
         columnsToCheck.add(5);
+        columnsToCheck.add(7);
+        columnsToCheck.add(8);
+        columnsToCheck.add(9);
+        columnsToCheck.add(10);
+        columnsToCheck.add(11);
+        columnsToCheck.add(12);
+        columnsToCheck.add(13);
+        columnsToCheck.add(14);
+        columnsToCheck.add(15);
+
     }
 
     public static void main(String[] args) throws Exception {
         String inputFilePath = args[0], outputFilePath = args[1];
-        List<List<String>> inputList = new ArrayList<>();
-        List<List<String>> outputList = new ArrayList<>();
+
 
         FileInputStream inputFileStream = new FileInputStream(inputFilePath);
         FileOutputStream outputStream = new FileOutputStream(outputFilePath);
         Workbook outputBook = new Workbook(outputStream, "Vishal", "01.1010");
 
         try (ReadableWorkbook wb = new ReadableWorkbook(inputFileStream)) {
-            Sheet sheet = wb.getFirstSheet();
-            try (Stream<Row> rows = sheet.openStream()) {
-                rows.forEach(row -> {
-                    List<String> rowData = row.getCells(0, row.getCellCount()).stream().map(Cell::getText).toList();
-                    List<Cell> rowData1 = row.getCells(0, row.getCellCount()).stream().toList();
-                    inputList.add(rowData);
-                });
-                inputFileStream.close();
-            } catch (Exception ex) {
-                ex.printStackTrace();
+            Sheet iSheet = wb.getFirstSheet();
+            Worksheet oSheet = outputBook.newWorksheet(iSheet.getName());
+
+            try (Stream<Row> rows = iSheet.openStream()) {
+                int r = 0;
+                List<Row> rowList = rows.toList();
+                for (Row row : rowList) {
+                    String propertyCode = row.getCell(COL_1).getText();
+                    if (propertyCode.contains("/")) {
+                        String[] split = propertyCode.split("/");
+                        for (int i = 0; i < split.length; i++, r++) {
+                            for (int c = 0; c < row.getCellCount(); c++) {
+                                if (columnsToCheck.contains(c) && row.getCell(c).getText().contains("/")) {
+                                    oSheet.value(r, c, row.getCell(c).getText().split("/")[i]);
+                                } else {
+                                    oSheet.value(r, c, row.getCell(c).getRawValue());
+                                }
+                            }
+                        }
+                    } else {
+                        for (int c = 0; c < row.getCellCount(); c++) {
+                            oSheet.value(r, c, row.getCell(c).getRawValue());
+                        }
+                        r++;
+                    }
+                }
             }
 
-            for (List<String> row : inputList) {
+            oSheet.finish();
+            outputBook.finish();
+            outputStream.close();
+            inputFileStream.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+
+          /*  for (List<Object> row : inputList) {
                 // if property code contains a /
-                if (row.get(COL_1).contains("/")) {
-                    List<List<String>> splitRows = new ArrayList<>();
-                    int splitCount = row.get(COL_1).split("/").length;
+                if (row.get(COL_1).toString().contains("/")) {
+                    List<List<Object>> splitRows = new ArrayList<>();
+                    int splitCount = row.get(COL_1).toString().split("/").length;
                     for (int k = 0; k < splitCount; k++) {
                         splitRows.add(new ArrayList<>());
                     }
                     for (int j = 0; j < row.size(); j++) {
-                        String content = row.get(j);
+                        String content = row.get(j).toString();
 
                         // if column data is supposed to be split
                         if (columnsToCheck.contains(j) && content.contains("/")) {
@@ -73,18 +105,8 @@ public class ExcelProcessor {
                 } else {
                     outputList.add(row);
                 }
-            }
+            } */
 
-
-            Worksheet outSheet = outputBook.newWorksheet(sheet.getName());
-            for (int i = 0; i < outputList.size(); i++) {
-                for (int j = 0; j < outputList.get(i).size(); j++) {
-                    outSheet.value(i, j, outputList.get(i).get(j));
-                }
-            }
-
-            outputBook.finish();
-        }
 
     }
 
